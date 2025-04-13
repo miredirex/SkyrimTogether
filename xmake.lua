@@ -79,7 +79,7 @@ before_build(function (target)
     #define IS_BRANCH_BETA %d
     #define IS_BRANCH_PREREL %d
     ]], 
-    bool_to_number[branch == "master"], 
+    bool_to_number[true], 
     bool_to_number[branch == "bluedove"], 
     bool_to_number[branch == "prerel"])
     io.writefile("build/BranchInfo.h", contents)
