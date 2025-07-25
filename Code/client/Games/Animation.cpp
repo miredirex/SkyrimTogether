@@ -54,8 +54,7 @@ static uint8_t TP_MAKE_THISCALL(HookPerformAction, ActorMediator, TESActionData*
         
         Event.Type = apAction->unkInput | (apAction->someFlag ? 0x4 : 0);
         Event.Tick = World::Get().GetTick();
-        assert(apAction->action);
-        Event.ActionId = apAction->action->formID;
+        Event.ActionId = apAction->action ? apAction->action->formID : 0;
         Event.TargetId = apAction->target ? apAction->target->formID : 0;
 
         
