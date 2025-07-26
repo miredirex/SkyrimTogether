@@ -12,7 +12,8 @@ struct ActionInput
 
     virtual ActorState* GetSourceActorState() const { return nullptr; } // 01
     virtual void sub_2() {} // 02
-    virtual void* sub_3() { return nullptr; } // 03 GetSourceSequencer
+    // TODO: Add BGSAnimationSequencer RE
+    virtual void* GetSourceSequencer() const { return nullptr; } // 03 returns BGSAnimationSequencer*
 
     void Release();
 

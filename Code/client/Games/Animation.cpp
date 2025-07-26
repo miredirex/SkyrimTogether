@@ -111,8 +111,9 @@ bool ActorMediator::PerformAction(TESActionData* apAction) noexcept
 // TODO: Deprecate this?
 bool ActorMediator::ForceAction(TESActionData* apAction) noexcept
 {
-    TP_THIS_FUNCTION(TAnimationStep, uint8_t, ActorMediator, TESActionData*);
-    using TApplyAnimationVariables = void*(void*, TESActionData*);
+    TP_THIS_FUNCTION(TAnimationStep, uint8_t, ActorMediator, TESActionData*)
+    // Comment out because unused, but want to leave the signature here
+    // using TApplyAnimationVariables = void*(void*, TESActionData*);
     
     POINTER_SKYRIMSE(TAnimationStep, PerformComplexAction, 38953);
 

@@ -415,7 +415,7 @@ bool TESActionData::ComputeResult()
             return true;
         }
 
-        auto v3 = sub_3();
+        auto v3 = GetSourceSequencer();
         if (v3)
         {
             result = 1;
