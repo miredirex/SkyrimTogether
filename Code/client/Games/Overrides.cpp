@@ -13,3 +13,4 @@ thread_local uint32_t ScopedExtraDataOverride::s_refCount = 0;
 thread_local uint32_t ScopedQuestOverride::s_refCount = 0;
 thread_local uint32_t ScopedSpellCastOverride::s_refCount = 0;
 thread_local uint32_t ScopedActionProcessOverride::s_refCount = 0;
+thread_local uint32_t ScopedForceAnimationOverride::s_refCount = 0;

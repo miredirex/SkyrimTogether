@@ -19,8 +19,6 @@
 TP_THIS_FUNCTION(TPerformAction, uint8_t, ActorMediator, TESActionData* apAction);
 static TPerformAction* RealPerformAction;
 
-// TODO: make scoped override
-thread_local bool g_forceAnimation = false;
 
 static uint8_t TP_MAKE_THISCALL(HookPerformAction, ActorMediator, TESActionData* apAction)
 {
@@ -37,7 +35,7 @@ static uint8_t TP_MAKE_THISCALL(HookPerformAction, ActorMediator, TESActionData*
 
     const bool bDoNetworkSend = pExtension && !pExtension->IsRemote() && bIsInitialEntry;
     const bool bSTRInitialEntry = bIsInitialEntry && (apAction->someFlag & BGSActionData::kSTRControlled) != 0;
-    const bool bG_ForcedInitialEntry = bIsInitialEntry && g_forceAnimation;
+    const bool bG_ForcedInitialEntry = bIsInitialEntry && ScopedForceAnimationOverride::IsOverriden();
     
     if (bDoNetworkSend || bSTRInitialEntry || bG_ForcedInitialEntry)
     {

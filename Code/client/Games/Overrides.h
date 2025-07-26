@@ -46,6 +46,9 @@ struct SpellCast
 struct ActionProcess
 {
 };
+struct ForceAnimation
+{
+};
 } // namespace details
 
 using ScopedReferencesOverride = ScopedOverride<TESObjectREFR>;
@@ -59,3 +62,4 @@ using ScopedExtraDataOverride = ScopedOverride<details::ExtraData>;
 using ScopedQuestOverride = ScopedOverride<details::Quest>;
 using ScopedSpellCastOverride = ScopedOverride<details::SpellCast>;
 using ScopedActionProcessOverride = ScopedOverride<details::ActionProcess>;
+using ScopedForceAnimationOverride = ScopedOverride<details::ForceAnimation>;

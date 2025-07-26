@@ -31,7 +31,7 @@ POINTER_SKYRIMSE(TApplyAnimationVariables, ApplyAnimationVariables, 39004);
 
 POINTER_SKYRIMSE(void*, qword_142F271B8, 403566);
 
-extern thread_local bool g_forceAnimation;
+#include <Games/Overrides.h>
 
 struct Class142F3A1E8
 {
@@ -106,7 +106,7 @@ void hkbBehaviorGraph::ReHandleEvent(hkEventContext& aContext, hkEventType& aTyp
     }
 
     // dis magic fixes animations
-    if (g_forceAnimation)
+    if (ScopedForceAnimationOverride::IsOverriden())
         aContext.byte30 = 1;
 
     pContext->symbolIdMap = cpSymbolId;
@@ -122,7 +122,7 @@ void hkbBehaviorGraph::ReHandleEvent(hkEventContext& aContext, hkEventType& aTyp
 
         TiltedPhoques::ThisCall(sub_1409F3EF0, this, aContext, type);
     }
-    if (byte12E || g_forceAnimation)
+    if (byte12E || ScopedForceAnimationOverride::IsOverriden())
     {
         TP_THIS_FUNCTION(Tsub_140A4DFA0, void, hkbBehaviorGraph, hkEventContext&);
         POINTER_SKYRIMSE(Tsub_140A4DFA0, sub_140A4DFA0, 60079);
