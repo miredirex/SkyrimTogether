@@ -65,9 +65,7 @@ static uint8_t TP_MAKE_THISCALL(HookPerformAction, ActorMediator, TESActionData*
             //      Are they "coupled"?
             Event.EventName = apAction->eventName.AsAscii();
             Event.TargetEventName = apAction->targetEventName.AsAscii();
-            Event.SequenceId = apAction->sequence ? apAction->sequence->formID : 0;
             Event.IdleId = apAction->idleForm ? apAction->idleForm->formID : 0;
-            Event.SequenceIndex = apAction->sequenceIndex;
             
             // Useful even for remote actors for potential ownership transfer edge cases
             if (pExtension)
@@ -120,6 +118,7 @@ bool ActorMediator::ForceAction(TESActionData* apAction) noexcept
     // POINTER_SKYRIMSE(TApplyAnimationVariables, ApplyAnimationVariables, 39004);
     // POINTER_SKYRIMSE(void*, qword_142F271B8, 403566);
 
+    ScopedActionProcessOverride performActionOverride;
     uint8_t result = 0;
 
     auto pActor = static_cast<Actor*>(apAction->actor);

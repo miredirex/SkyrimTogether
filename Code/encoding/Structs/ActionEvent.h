@@ -19,9 +19,9 @@ struct ActionEvent
     //      then back again at some point after it is received?
     //      Need to check if this is relevant for paired animations
     uint32_t TargetId{0};
-    uint32_t SequenceId{0};
+    // uint32_t SequenceId{0};
     uint32_t IdleId{0};
-    uint32_t SequenceIndex{0};
+    // uint32_t SequenceIndex{0};
     uint32_t State1{0};
     uint32_t State2{0};
     uint32_t Type{0};

@@ -61,18 +61,16 @@ void AnimationSystem::Update(World& aWorld, Actor* apActor, RemoteAnimationCompo
         // Play the animation
         TESActionData actionData(unkInput, apActor, pAction, pTarget);
         actionData.eventName = BSFixedString(it->EventName.c_str());
-        actionData.sequence = Cast<TESIdleForm>(TESForm::GetById(it->SequenceId));
         actionData.idleForm = Cast<TESIdleForm>(TESForm::GetById(it->IdleId));
-        actionData.sequenceIndex = actionData.sequence ? it->SequenceIndex : 0;
         actionData.someFlag = ((it->Type & 0x4) != 0) ? 1 : 0;
 
         // Mark this as an STR-controlled action
         // This is needed to allow the game's recursive processing calls
         actionData.someFlag |= BGSActionData::kSTRControlled;
-
-        // With more RE, we could maybe perform actions through an even higher level system?
-        // Add to sequencer, do stuff, etc.
-        const auto result = ActorMediator::Get()->PerformAction(&actionData);
+        
+        // TODO: not sure if we should use PerformAction or ForceAction
+        //const auto result = ActorMediator::Get()->PerformAction(&actionData);
+        const auto result = ActorMediator::Get()->ForceAction(&actionData);
         
         if (result)
             spdlog::info("Action {} processed with result: {}", it->EventName, result);
