@@ -20,10 +20,10 @@ namespace stubs
         L"EngineFixes.dll",          // Skyrim Engine Fixes, breaks our hooks
         L"SkyrimSoulsRE.dll",        // Our mod implements this with special handling
         L"crashhandler64.dll",       // Stream crash handler, breaks heap
-        L"fraps64.dll",              // Breaks tilted ui
-        L"SpecialK64.dll",           // breaks rendering
-        L"ReShade64_SpecialK64.dll", // same reason
-        L"NvCamera64.dll",           // broken af nvidia stuff, blacklisted for now, needs fix later
+       // L"fraps64.dll",              // Breaks tilted ui
+       // L"SpecialK64.dll",           // breaks rendering
+       // L"ReShade64_SpecialK64.dll", // same reason
+       // L"NvCamera64.dll",           // broken af nvidia stuff, blacklisted for now, needs fix later
        // L"atiuxp64.dll",
        // L"aticfx64.dll"
     };

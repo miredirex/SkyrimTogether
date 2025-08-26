@@ -59,8 +59,8 @@ bool TiltedOnlineApp::BeginMain()
     LoadScriptExender();
 
     // TODO: Figure out a way to un-blacklist NvCamera64.dll (see DllBlocklist.cpp). Then this hack can be removed
-    if (IsNvidiaOverlayLoaded())
-        ApplyNvidiaFix();
+    // if (IsNvidiaOverlayLoaded())
+    //     ApplyNvidiaFix();
 
     return true;
 }
@@ -122,11 +122,11 @@ void TiltedOnlineApp::UninstallHooks()
 
 void TiltedOnlineApp::ApplyNvidiaFix() noexcept
 {
-    auto d3dFeatureLevelOut = D3D_FEATURE_LEVEL_11_0;
-    HRESULT hr = CreateEarlyDxDevice(&m_pDevice, &d3dFeatureLevelOut);
-    if (FAILED(hr))
-        spdlog::error("D3D11CreateDevice failed. Detected an NVIDIA GPU, error code={0:x}", hr);
+    // auto d3dFeatureLevelOut = D3D_FEATURE_LEVEL_11_0;
+    // HRESULT hr = CreateEarlyDxDevice(&m_pDevice, &d3dFeatureLevelOut);
+    // if (FAILED(hr))
+    //     spdlog::error("D3D11CreateDevice failed. Detected an NVIDIA GPU, error code={0:x}", hr);
 
-    if (d3dFeatureLevelOut < D3D_FEATURE_LEVEL_11_0)
-        spdlog::warn("Unexpected D3D11 feature level detected (< 11.0), may cause issues");
+    // if (d3dFeatureLevelOut < D3D_FEATURE_LEVEL_11_0)
+    //     spdlog::warn("Unexpected D3D11 feature level detected (< 11.0), may cause issues");
 }
