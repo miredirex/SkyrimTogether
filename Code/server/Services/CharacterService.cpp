@@ -120,7 +120,7 @@ void CharacterService::Serialize(World& aRegistry, entt::entity aEntity, Charact
     }
 
     const auto& animationComponent = aRegistry.get<AnimationComponent>(aEntity);
-    apSpawnRequest->LatestAction = animationComponent.CurrentAction;
+    apSpawnRequest->ActionsToReplay = animationComponent.ActionsToReplayOnSpawn.Actions;
 }
 
 void CharacterService::OnUpdate(const UpdateEvent&) const noexcept
@@ -237,6 +237,11 @@ void CharacterService::OnAssignCharacterRequest(const PacketEvent<AssignCharacte
             response.Position = movementComponent.Position;
             response.CellId = cellIdComponent.Cell;
             response.WorldSpaceId = cellIdComponent.WorldSpaceId;
+
+            if (auto* pAnimationComponent = m_world.try_get<AnimationComponent>(*itor))
+            {
+                response.ActionsToReplay = pAnimationComponent->ActionsToReplayOnSpawn.Actions;
+            }
 
             acMessage.pPlayer->Send(response);
 
@@ -429,6 +434,8 @@ void CharacterService::OnReferencesMoveRequest(const PacketEvent<ClientReference
             animationComponent.Actions.push_back(animationComponent.CurrentAction);
         }
 
+        animationComponent.ActionsToReplayOnSpawn.AppendAll(update.ActionEvents);
+
         movementComponent.Sent = false;
     }
 }
@@ -614,7 +621,6 @@ void CharacterService::CreateCharacter(const PacketEvent<AssignCharacterRequest>
     movementComponent.Sent = false;
 
     auto& animationComponent = m_world.emplace<AnimationComponent>(cEntity);
-    animationComponent.CurrentAction = message.LatestAction;
 
     // If this is a player character store a ref and trigger an event
     if (isPlayer)
@@ -794,7 +800,7 @@ void CharacterService::ProcessMovementChanges() const noexcept
     const auto characterView = m_world.view<CharacterComponent, CellIdComponent, MovementComponent, AnimationComponent, OwnerComponent>();
 
     TiltedPhoques::Map<Player*, ServerReferencesMoveRequest> messages;
-
+    
     for (auto pPlayer : m_world.GetPlayerManager())
     {
         auto& message = messages[pPlayer];
@@ -838,14 +844,10 @@ void CharacterService::ProcessMovementChanges() const noexcept
         }
     }
 
-    m_world.view<AnimationComponent>().each(
-        [](AnimationComponent& animationComponent)
-        {
-            if (!animationComponent.Actions.empty())
-                animationComponent.LastSerializedAction = animationComponent.Actions[animationComponent.Actions.size() - 1];
-
-            animationComponent.Actions.clear();
-        });
+    m_world.view<AnimationComponent>().each([](AnimationComponent& animationComponent)
+    {
+        animationComponent.Actions.clear();
+    });
 
     m_world.view<MovementComponent>().each([](MovementComponent& movementComponent) { movementComponent.Sent = true; });
 
