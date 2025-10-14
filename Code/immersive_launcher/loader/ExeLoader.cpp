@@ -302,18 +302,17 @@ bool ExeLoader::Load(const uint8_t* apProgramBuffer)
     auto sourceDebugDir = sourceNtHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG];
 
     LoadSections(ntHeader);
+
+    DWORD oldProtect;
+    VirtualProtect(sourceNtHeader, 0x1000, PAGE_EXECUTE_READWRITE, &oldProtect);
+    sourceNtHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT] = ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
+
+
     LoadImports(ntHeader);
 #if defined(_M_AMD64)
     LoadExceptionTable(ntHeader);
     LoadTLS(ntHeader, sourceNtHeader);
 #endif
-
-    // copy over the offset to the new imports directory
-    DWORD oldProtect;
-    VirtualProtect(sourceNtHeader, 0x1000, PAGE_EXECUTE_READWRITE, &oldProtect);
-
-    // re-target the import directory to the target's; ours isn't needed anymore.
-    sourceNtHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT] = ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
 
     const size_t ntCompleteHeaderSize = sizeof(IMAGE_NT_HEADERS) + (ntHeader->FileHeader.NumberOfSections * (sizeof(IMAGE_SECTION_HEADER)));
 

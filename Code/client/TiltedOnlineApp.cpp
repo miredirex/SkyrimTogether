@@ -17,6 +17,8 @@
 #include <Services/ImguiService.h>
 #include <Services/DiscordService.h>
 
+#include <Games/Memory.h>
+
 #include <ScriptExtender.h>
 #include <NvidiaUtil.h>
 
@@ -52,6 +54,9 @@ void* TiltedOnlineApp::GetMainAddress() const
 
 bool TiltedOnlineApp::BeginMain()
 {
+    if (GetModuleHandleW(L"EngineFixes.dll") && Memory::IsFormAllocateReplacedByEF())
+        Memory::RehookMemoryFunctions();
+
     World::Create();
     World::Get().ctx().at<DiscordService>().Init();
     World::Get().ctx().emplace<RenderSystemD3D11>(World::Get().ctx().at<OverlayService>(), World::Get().ctx().at<ImguiService>());

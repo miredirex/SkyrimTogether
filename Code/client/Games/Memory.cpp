@@ -67,6 +67,35 @@ void Memory::Free(void* apData) noexcept
     TiltedPhoques::ThisCall(RealFormFree, GameHeap::Get(), apData, false);
 }
 
+bool Memory::IsFormAllocateReplacedByEF() noexcept
+{
+    POINTER_SKYRIMSE(TFormAllocate, s_formAllocate, 68115);
+    TFormAllocate* pFormAllocate = s_formAllocate.Get();
+
+    // 6-byte sequence of 'FF 25 00 00 00 00' comes before the virtual address we're after; so, +6
+    auto possibleEfAllocAddr = *reinterpret_cast<uintptr_t*>(reinterpret_cast<uint8_t*>(*pFormAllocate) + 6);
+
+    MEMORY_BASIC_INFORMATION mbi;
+    if (VirtualQuery((void*)possibleEfAllocAddr, &mbi, sizeof(mbi)) != 0) 
+    {
+        return mbi.AllocationBase == GetModuleHandleW(L"EngineFixes.dll");
+    }
+    return false;
+}
+
+bool Memory::RehookMemoryFunctions() noexcept
+{
+    POINTER_SKYRIMSE(TFormAllocate, s_formAllocate, 68115);
+    TFormAllocate* pFormAllocate = s_formAllocate.Get();
+
+    uintptr_t efAllocAddr = *reinterpret_cast<uintptr_t*>(reinterpret_cast<uint8_t*>(*pFormAllocate) + 6);
+    auto pEngineFixesAllocate = reinterpret_cast<decltype(&HookFormAllocate)>(efAllocAddr);
+
+    RealFormAllocate = pEngineFixesAllocate;
+    TP_HOOK_IMMEDIATE(&RealFormAllocate, HookFormAllocate);
+    return true; // TODO when to return false?
+}
+
 size_t Hook_msize(void* apData)
 {
     return mi_malloc_size(apData);
