@@ -29,9 +29,9 @@ RUN --mount=type=cache,target=/root/.xmake/packages \
     xmake -y && \
     xmake install -y -o package
 
-# Actual server runtime image; distroless for small footprint
+# Actual server runtime image; (todo: maybe reconsider 'distroless' in the future)
 
-FROM gcr.io/distroless/cc-debian12 AS runtime
+FROM debian:12-slim AS runtime
 
 WORKDIR /st-server
 
