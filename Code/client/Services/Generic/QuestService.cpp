@@ -9,6 +9,7 @@
 #include <Forms/TESQuest.h>
 #include <Games/TES.h>
 #include <Games/Overrides.h>
+#include <Games/Skyrim/AI/Movement/PlayerControls.h>
 
 #include <Events/EventDispatcher.h>
 
@@ -36,6 +37,10 @@ QuestService::QuestService(World& aWorld, entt::dispatcher& aDispatcher)
     auto* pEventList = EventDispatcherManager::Get();
     pEventList->questStartStopEvent.RegisterSink(this);
     pEventList->questStageEvent.RegisterSink(this);
+
+    pEventList->scenePhaseEvent.RegisterSink(this);
+    pEventList->sceneActionEvent.RegisterSink(this);
+    pEventList->sceneEvent.RegisterSink(this);
 }
 
 void QuestService::OnConnected(const ConnectedEvent&) noexcept
@@ -54,10 +59,13 @@ void QuestService::OnConnected(const ConnectedEvent&) noexcept
 
 BSTEventResult QuestService::OnEvent(const TESQuestStartStopEvent* apEvent, const EventDispatcher<TESQuestStartStopEvent>*)
 {
-    if (ScopedQuestOverride::IsOverriden() || !m_world.Get().GetPartyService().IsInParty())
+    if (!m_world.Get().GetPartyService().IsInParty())
+    {
+        spdlog::debug("Not in party, quest stage advancement won't be sent");
         return BSTEventResult::kOk;
+    }
 
-    spdlog::info("Quest start/stop event: {:X}", apEvent->formId);
+    spdlog::info("Local OnEvent: quest start/stop event: {:X}", apEvent->formId);
 
     if (TESQuest* pQuest = Cast<TESQuest>(TESForm::GetById(apEvent->formId)))
     {
@@ -102,10 +110,13 @@ BSTEventResult QuestService::OnEvent(const TESQuestStartStopEvent* apEvent, cons
 
 BSTEventResult QuestService::OnEvent(const TESQuestStageEvent* apEvent, const EventDispatcher<TESQuestStageEvent>*)
 {
-    if (ScopedQuestOverride::IsOverriden() || !m_world.Get().GetPartyService().IsInParty())
+    if (!CanAdvanceQuestForParty())
+    {
+        spdlog::warn("Quest stage advancement won't be sent: either not in party, or a non-leader with disabled controls.");
         return BSTEventResult::kOk;
+    }
 
-    spdlog::info("Quest stage event: {:X}, stage: {}", apEvent->formId, apEvent->stageId);
+    spdlog::info("Local OnEvent: quest stage event: {:X}, stage: {}. Sending to server.", apEvent->formId, apEvent->stageId);
 
     // there is no reason to even fetch the quest object, since the event provides everything already....
     if (TESQuest* pQuest = Cast<TESQuest>(TESForm::GetById(apEvent->formId)))
@@ -129,6 +140,8 @@ BSTEventResult QuestService::OnEvent(const TESQuestStageEvent* apEvent, const Ev
             }
         }
 
+        //m_doneStages[apEvent->formId].push_back(apEvent->stageId);
+
         m_world.GetRunner().Queue(
             [&, formId = apEvent->formId, stageId = apEvent->stageId, type = pQuest->type]()
             {
@@ -150,6 +163,27 @@ BSTEventResult QuestService::OnEvent(const TESQuestStageEvent* apEvent, const Ev
     return BSTEventResult::kOk;
 }
 
+BSTEventResult QuestService::OnEvent(const TESSceneEvent* apEvent, const EventDispatcher<TESSceneEvent>*)
+{
+    const String sceneType = apEvent->sceneType == 0 ? "Begin" : "End";
+    spdlog::info("TESSceneEvent event: quest stage {}, type {}", apEvent->questStageId, sceneType);
+
+    return BSTEventResult::kOk;
+}
+
+BSTEventResult QuestService::OnEvent(const TESSceneActionEvent* apEvent, const EventDispatcher<TESSceneActionEvent>*)
+{
+    spdlog::info("TESSceneActionEvent event: quest stage {}, ref alias {:X}", apEvent->questStageId, apEvent->refAliasId);
+    return BSTEventResult::kOk;
+}
+
+BSTEventResult QuestService::OnEvent(const TESScenePhaseEvent* apEvent, const EventDispatcher<TESScenePhaseEvent>*)
+{
+    const String sceneType = apEvent->sceneType == 0 ? "Begin" : "End";
+    spdlog::info("TESScenePhaseEvent event: quest stage {}, phase index {}, type {}", apEvent->questStageId, apEvent->phaseIndex, sceneType);
+    return BSTEventResult::kOk;
+}
+
 void QuestService::OnQuestUpdate(const NotifyQuestUpdate& aUpdate) noexcept
 {
     ModSystem& modSystem = World::Get().GetModSystem();
@@ -168,31 +202,48 @@ void QuestService::OnQuestUpdate(const NotifyQuestUpdate& aUpdate) noexcept
                      aUpdate.ClientQuestType, formId, pQuest->fullName.value.AsAscii());
     }
 
+    //const auto& doneStages = m_doneStages[pQuest->formID];
+    //if (std::find(doneStages.begin(), doneStages.end(), aUpdate.Stage) != doneStages.end())
+    //{
+        // We've already completed this stage recently. Return to avoid reflection
+        //return;
+    //}
+
     bool bResult = false;
     switch (aUpdate.Status)
     {
     case NotifyQuestUpdate::Started:
     {
+        spdlog::info("(NotifyQuestUpdate) Remote quest started. Starting local quest {:X}, stage: {}", formId, aUpdate.Stage);
         pQuest->ScriptSetStage(aUpdate.Stage);
         pQuest->SetActive(true);
         bResult = true;
-        spdlog::info("Remote quest started: {:X}, stage: {}", formId, aUpdate.Stage);
         break;
     }
     case NotifyQuestUpdate::StageUpdate:
+        spdlog::info("(NotifyQuestUpdate) Remote quest updated. Updating local quest {:X}, stage: {}", formId, aUpdate.Stage);
         pQuest->ScriptSetStage(aUpdate.Stage);
         bResult = true;
-        spdlog::info("Remote quest updated: {:X}, stage: {}", formId, aUpdate.Stage);
         break;
     case NotifyQuestUpdate::Stopped:
+        spdlog::info("(NotifyQuestUpdate) Remote quest stopped. Stopping local quest {:X}, stage: {}", formId, aUpdate.Stage);
         bResult = StopQuest(formId);
-        spdlog::info("Remote quest stopped: {:X}, stage: {}", formId, aUpdate.Stage);
         break;
     default: break;
     }
 
     if (!bResult)
         spdlog::error("Failed to update the client quest state, quest: {:X}, stage: {}, status: {}", formId, aUpdate.Stage, aUpdate.Status);
+}
+
+bool QuestService::CanAdvanceQuestForParty() const noexcept
+{
+    const bool isInParty = m_world.Get().GetPartyService().IsInParty();
+    // Party leaders can always advance quests. 
+    // Members can only advance quest stages when their controls are enabled (needed for scripted cutscenes to work properly)
+    const bool canAdvanceQuestStages = m_world.Get().GetPartyService().IsLeader() || PlayerControls::IsMovementControlsEnabled();
+
+    return isInParty && canAdvanceQuestStages;
 }
 
 bool QuestService::StopQuest(uint32_t aformId)

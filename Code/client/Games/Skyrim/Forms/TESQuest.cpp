@@ -54,13 +54,9 @@ void TESQuest::SetActive(bool toggle)
 
 bool TESQuest::IsStageDone(uint16_t stageIndex)
 {
-    for (Stage* it : stages)
-    {
-        if (it->stageIndex == stageIndex)
-            return it->IsDone();
-    }
-
-    return false;
+    TP_THIS_FUNCTION(TIsStageDone, bool, TESQuest, uint16_t);
+    POINTER_SKYRIMSE(TIsStageDone, IsStageDone, 25011);
+    return IsStageDone(this, stageIndex);
 }
 
 bool TESQuest::Kill()
@@ -88,23 +84,28 @@ bool TESQuest::EnsureQuestStarted(bool& success, bool force)
     return SetRunning(this, &success, force);
 }
 
-bool TESQuest::SetStage(uint16_t newStage)
+bool TESQuest::SetStage(uint16_t stageIndex)
 {
     ScopedQuestOverride _;
 
     TP_THIS_FUNCTION(TSetStage, bool, TESQuest, uint16_t);
     POINTER_SKYRIMSE(TSetStage, SetStage, 25004);
-    return SetStage(this, newStage);
+    return SetStage(this, stageIndex);
 }
 
 void TESQuest::ScriptSetStage(uint16_t stageIndex)
 {
+    spdlog::info("ScriptSetStage called with a value of {}", stageIndex);
     if (currentStage == stageIndex || IsStageDone(stageIndex))
+    {
+        spdlog::warn("\tThis stage {} is already done, not calling SetCurrentStageID", stageIndex);
         return;
+    }
 
     using Quest = TESQuest;
     PAPYRUS_FUNCTION(void, Quest, SetCurrentStageID, int);
     s_pSetCurrentStageID(this, stageIndex);
+    spdlog::info("ScriptSetStage: successfully set to {}", stageIndex);
 }
 
 void TESQuest::SetStopped()

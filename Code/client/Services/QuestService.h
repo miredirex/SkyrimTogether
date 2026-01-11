@@ -10,10 +10,8 @@ struct TESQuest;
 
 /**
  * @brief Handles quest sync
- *
- * This service is currently not in use.
  */
-class QuestService final : public BSTEventSink<TESQuestStartStopEvent>, BSTEventSink<TESQuestStageEvent>
+class QuestService final : public BSTEventSink<TESQuestStartStopEvent>, BSTEventSink<TESQuestStageEvent>, BSTEventSink<TESSceneEvent>, BSTEventSink<TESSceneActionEvent>, BSTEventSink<TESScenePhaseEvent>
 {
 public:
     QuestService(World&, entt::dispatcher&);
@@ -30,10 +28,17 @@ private:
 
     BSTEventResult OnEvent(const TESQuestStartStopEvent*, const EventDispatcher<TESQuestStartStopEvent>*) override;
     BSTEventResult OnEvent(const TESQuestStageEvent*, const EventDispatcher<TESQuestStageEvent>*) override;
+    BSTEventResult OnEvent(const TESSceneEvent*, const EventDispatcher<TESSceneEvent>*) override;
+    BSTEventResult OnEvent(const TESSceneActionEvent*, const EventDispatcher<TESSceneActionEvent>*) override;
+    BSTEventResult OnEvent(const TESScenePhaseEvent*, const EventDispatcher<TESScenePhaseEvent>*) override;
 
     void OnQuestUpdate(const NotifyQuestUpdate&) noexcept;
 
+    bool CanAdvanceQuestForParty() const noexcept;
+
     World& m_world;
+    // (UNUSED) Keep track of done stages to avoid reflecting updates back-and-forth between players
+    Map<uint32_t, Vector<uint16_t>> m_doneStages = {};
 
     entt::scoped_connection m_joinedConnection;
     entt::scoped_connection m_leftConnection;

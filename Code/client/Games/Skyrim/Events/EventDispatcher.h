@@ -190,14 +190,29 @@ struct TESResolveNPCTemplatesEvent
 
 struct TESSceneEvent
 {
+    uint32_t sceneFormId;
+    uint32_t sceneType; // BEGIN or END
+    uint16_t questStageId;
+    void* callback;
 };
 
 struct TESSceneActionEvent
 {
+    uint32_t sceneFormId;
+    uint32_t actionId;
+    uint32_t questFormId;
+    uint32_t refAliasId;
+    uint16_t questStageId;
+    void* callback;
 };
 
 struct TESScenePhaseEvent
 {
+    uint32_t sceneFormId;
+    uint32_t phaseIndex;
+    uint32_t sceneType; // BEGIN or END
+    uint16_t questStageId;
+    void* callback;
 };
 
 struct TESSellEvent
