@@ -358,7 +358,9 @@ void MagicService::OnAddTargetEvent(const AddTargetEvent& acEvent) noexcept
 
     m_transport.Send(request);
 
-    spdlog::debug("Sending effect sync request. SpellId={:X} ({:X} - {:X}), EffectId={:X} ({:X} - {:X})", request.SpellId.LogFormat(), request.SpellId.BaseId, request.SpellId.ModId, request.EffectId.LogFormat(), request.EffectId.BaseId, request.EffectId.ModId);
+    spdlog::debug("Sending effect sync request. SpellId={:X} ({:X} / {:X}), EffectId={:X} ({:X} / {:X})",
+                  request.SpellId.LogFormat(), request.SpellId.BaseId, request.SpellId.ModId,
+                  request.EffectId.LogFormat(), request.EffectId.BaseId, request.EffectId.ModId);
 }
 
 void MagicService::OnNotifyAddTarget(const NotifyAddTarget& acMessage) noexcept
@@ -424,8 +426,8 @@ void MagicService::OnNotifyAddTarget(const NotifyAddTarget& acMessage) noexcept
         pActor->GetExtension()->GraphDescriptorHash = AnimationGraphDescriptor_VampireLordBehavior::m_key;
 
     // This hack is here because slow time seems to be twice as slow when cast by an npc
-    //if (pEffect->IsSlowEffect())
-    //    pActor = PlayerCharacter::Get();
+    if (pEffect->IsSlowEffect())
+        pActor = PlayerCharacter::Get();
 
     pActor->magicTarget.AddTarget(data, acMessage.ApplyHealPerkBonus, acMessage.ApplyStaminaPerkBonus);
     spdlog::debug("Applied remote magic effect");

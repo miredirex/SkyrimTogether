@@ -189,8 +189,6 @@ void ProcessKeyboard(uint16_t aKey, uint16_t aScanCode, cef_key_event_type_t aTy
 
     const auto active = overlay.GetActive();
 
-    //spdlog::debug("ProcessKey, type: {}, key: {}, active: {}", aType, aKey, active);
-
     if (aType != KEYEVENT_CHAR && (IsToggleKey(aKey) || (IsDisableKey(aKey) && active)))
     {
         if (!overlay.GetInGame())

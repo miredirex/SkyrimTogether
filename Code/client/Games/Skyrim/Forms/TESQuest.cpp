@@ -95,17 +95,17 @@ bool TESQuest::SetStage(uint16_t stageIndex)
 
 void TESQuest::ScriptSetStage(uint16_t stageIndex)
 {
-    spdlog::info("ScriptSetStage called with a value of {}", stageIndex);
+    spdlog::debug(__FUNCTION__ ": called with a value of {}", stageIndex);
     if (currentStage == stageIndex || IsStageDone(stageIndex))
     {
-        spdlog::warn("\tThis stage {} is already done, not calling SetCurrentStageID", stageIndex);
+        spdlog::debug("Stage {} is already done, not calling SetCurrentStageID", stageIndex);
         return;
     }
 
     using Quest = TESQuest;
     PAPYRUS_FUNCTION(void, Quest, SetCurrentStageID, int);
     s_pSetCurrentStageID(this, stageIndex);
-    spdlog::info("ScriptSetStage: successfully set to {}", stageIndex);
+    spdlog::debug(__FUNCTION__ ": stage has been set to {}", stageIndex);
 }
 
 void TESQuest::SetStopped()
