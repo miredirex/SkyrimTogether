@@ -114,6 +114,24 @@ void TESQuest::SetStopped()
     MarkChanged(2);
 }
 
+bool TESQuest::IsAnyCutscenePlaying()
+{
+    for (const auto& scene : scenes)
+    {
+        if (scene->isPlaying)
+            return true;
+    }
+    return false;
+}
+
+void BGSScene::ScriptForceStart()
+{
+    using Scene = BGSScene;
+    PAPYRUS_FUNCTION(void, Scene, ForceStart);
+    s_pForceStart(this);
+    spdlog::debug(__FUNCTION__ ": force started scene {:X}, isPlaying? {}", formID, isPlaying);
+}
+
 static TiltedPhoques::Initializer s_questInitHooks(
     []()
     {

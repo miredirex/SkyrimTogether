@@ -14,7 +14,9 @@
 #include <Events/EventDispatcher.h>
 
 #include <Messages/RequestQuestUpdate.h>
+#include <Messages/RequestQuestSceneUpdate.h>
 #include <Messages/NotifyQuestUpdate.h>
+#include <Messages/NotifyQuestSceneUpdate.h>
 
 static TESQuest* FindQuestByNameId(const String& name)
 {
@@ -29,6 +31,7 @@ QuestService::QuestService(World& aWorld, entt::dispatcher& aDispatcher)
 {
     m_joinedConnection = aDispatcher.sink<ConnectedEvent>().connect<&QuestService::OnConnected>(this);
     m_questUpdateConnection = aDispatcher.sink<NotifyQuestUpdate>().connect<&QuestService::OnQuestUpdate>(this);
+    m_questSceneUpdateConnection = aDispatcher.sink<NotifyQuestSceneUpdate>().connect<&QuestService::OnQuestSceneUpdate>(this);
 
     // A note about the Gameevents:
     // TESQuestStageItemDoneEvent gets fired to late, we instead use TESQuestStageEvent, because it responds immediately.
@@ -37,6 +40,10 @@ QuestService::QuestService(World& aWorld, entt::dispatcher& aDispatcher)
     auto* pEventList = EventDispatcherManager::Get();
     pEventList->questStartStopEvent.RegisterSink(this);
     pEventList->questStageEvent.RegisterSink(this);
+
+    pEventList->scenePhaseEvent.RegisterSink(this);
+    pEventList->sceneActionEvent.RegisterSink(this);
+    pEventList->sceneEvent.RegisterSink(this);
 }
 
 void QuestService::OnConnected(const ConnectedEvent&) noexcept
@@ -57,17 +64,17 @@ BSTEventResult QuestService::OnEvent(const TESQuestStartStopEvent* apEvent, cons
 {
     if (!m_world.Get().GetPartyService().IsInParty())
     {
-        spdlog::debug("(Local) TESQuestStartStopEvent event: not in party, quest stage advancement won't be sent. Returning.");
+        spdlog::debug("(Local) TESQuestStartStopEvent: not in party, quest stage advancement won't be sent. Returning.");
         return BSTEventResult::kOk;
     }
 
-    spdlog::info("(Local) TESQuestStartStopEvent event: quest start/stop event: {:X}", apEvent->formId);
+    spdlog::info("(Local) TESQuestStartStopEvent: quest start/stop event: {:X}", apEvent->formId);
 
     if (TESQuest* pQuest = Cast<TESQuest>(TESForm::GetById(apEvent->formId)))
     {
         if (IsNonSyncableQuest(pQuest))
             return BSTEventResult::kOk;
-     
+
         if (pQuest->type == TESQuest::Type::None || pQuest->type == TESQuest::Type::Miscellaneous)
         {
             // Perhaps redundant, but necessary. We need the logging and
@@ -76,13 +83,12 @@ BSTEventResult QuestService::OnEvent(const TESQuestStartStopEvent* apEvent, cons
             auto& modSys = m_world.GetModSystem();
             if (modSys.GetServerModId(pQuest->formID, Id))
             {
-                spdlog::info(__FUNCTION__ ": queuing type none/misc quest gameId {:X} questStage {} questStatus {} questType {} formId {:X} name {}",
-                             Id.LogFormat(),  pQuest->currentStage, pQuest->IsStopped() ? RequestQuestUpdate::Stopped : RequestQuestUpdate::Started,
-                             static_cast<std::underlying_type_t<TESQuest::Type>>(pQuest->type), 
-                             pQuest->formID, pQuest->fullName.value.AsAscii());
+                spdlog::info(
+                    __FUNCTION__ ": queuing type none/misc quest gameId {:X} questStage {} questStatus {} questType {} formId {:X} name {}", Id.LogFormat(), pQuest->currentStage, pQuest->IsStopped() ? RequestQuestUpdate::Stopped : RequestQuestUpdate::Started,
+                    static_cast<std::underlying_type_t<TESQuest::Type>>(pQuest->type), pQuest->formID, pQuest->fullName.value.AsAscii());
             }
         }
-        
+
         m_world.GetRunner().Queue(
             [&, formId = pQuest->formID, stageId = pQuest->currentStage, stopped = pQuest->IsStopped(), type = pQuest->type]()
             {
@@ -94,7 +100,7 @@ BSTEventResult QuestService::OnEvent(const TESQuestStartStopEvent* apEvent, cons
                     update.Id = Id;
                     update.Stage = stageId;
                     update.Status = stopped ? RequestQuestUpdate::Stopped : RequestQuestUpdate::Started;
-                    update.ClientQuestType = static_cast<std::underlying_type_t<TESQuest::Type>>(type); 
+                    update.ClientQuestType = static_cast<std::underlying_type_t<TESQuest::Type>>(type);
 
                     m_world.GetTransport().Send(update);
                 }
@@ -106,13 +112,18 @@ BSTEventResult QuestService::OnEvent(const TESQuestStartStopEvent* apEvent, cons
 
 BSTEventResult QuestService::OnEvent(const TESQuestStageEvent* apEvent, const EventDispatcher<TESQuestStageEvent>*)
 {
+    if (TESQuest* pQuest = Cast<TESQuest>(TESForm::GetById(apEvent->formId)))
+    {
+        spdlog::info("(Local) TESQuestStageEvent: \"{}\" - in cutscene? {}", pQuest->GetName(), pQuest->IsAnyCutscenePlaying());
+    }
+
     if (!CanAdvanceQuestForParty())
     {
-        spdlog::warn("(Local) TESQuestStageEvent event: quest stage advancement won't be sent: either not in party, or a non-leader with disabled controls.");
+        spdlog::warn("(Local) TESQuestStageEvent: quest stage advancement won't be sent: either not in party, or a non-leader with disabled controls.");
         return BSTEventResult::kOk;
     }
 
-    spdlog::info("(Local) TESQuestStageEvent event: {:X}, stage: {}. Sending to server.", apEvent->formId, apEvent->stageId);
+    spdlog::info("(Local) TESQuestStageEvent: {:X}, stage: {}. Sending to server.", apEvent->formId, apEvent->stageId);
 
     // there is no reason to even fetch the quest object, since the event provides everything already....
     if (TESQuest* pQuest = Cast<TESQuest>(TESForm::GetById(apEvent->formId)))
@@ -128,11 +139,9 @@ BSTEventResult QuestService::OnEvent(const TESQuestStageEvent* apEvent, const Ev
             auto& modSys = m_world.GetModSystem();
             if (modSys.GetServerModId(pQuest->formID, Id))
             {
-                spdlog::info(__FUNCTION__ ": queuing type none/misc quest gameId {:X} questStage {} questStatus {} questType {} formId {:X} name {}",
-                             Id.LogFormat(), pQuest->currentStage,
-                             RequestQuestUpdate::StageUpdate,
-                             static_cast<std::underlying_type_t<TESQuest::Type>>(pQuest->type),
-                             pQuest->formID, pQuest->fullName.value.AsAscii());
+                spdlog::info(
+                    __FUNCTION__ ": queuing type none/misc quest gameId {:X} questStage {} questStatus {} questType {} formId {:X} name {}", Id.LogFormat(), pQuest->currentStage, RequestQuestUpdate::StageUpdate, static_cast<std::underlying_type_t<TESQuest::Type>>(pQuest->type), pQuest->formID,
+                    pQuest->fullName.value.AsAscii());
             }
         }
 
@@ -157,6 +166,60 @@ BSTEventResult QuestService::OnEvent(const TESQuestStageEvent* apEvent, const Ev
     return BSTEventResult::kOk;
 }
 
+BSTEventResult QuestService::OnEvent(const TESSceneEvent* apEvent, const EventDispatcher<TESSceneEvent>*)
+{
+    const String sceneType = apEvent->sceneType == 0 ? "Begin" : "End";
+    spdlog::info("(Local) TESSceneEvent event: scene formID {:X}, type {}", apEvent->sceneFormId, sceneType);
+
+    if (!m_world.GetPartyService().IsInParty() || !m_world.GetPartyService().IsLeader())
+    {
+        spdlog::warn("(Local) TESSceneEvent: scene update won't be sent: either not in party or not leader!");
+        return BSTEventResult::kAbort;
+    }
+
+    if (BGSScene* pScene = Cast<BGSScene>(TESForm::GetById(apEvent->sceneFormId)))
+    {
+        m_world.GetRunner().Queue(
+            [&, sceneId = apEvent->sceneFormId, questId = pScene->owningQuest->formID]()
+            {
+                GameId sceneGameId;
+                GameId questGameId;
+                auto& modSys = m_world.GetModSystem();
+                if (modSys.GetServerModId(sceneId, sceneGameId) && modSys.GetServerModId(questId, questGameId))
+                {
+                    RequestQuestSceneUpdate update;
+                    update.SceneId = sceneGameId;
+                    update.QuestId = questGameId;
+
+                    m_world.GetTransport().Send(update);
+                }
+            });
+    }
+
+    return BSTEventResult::kOk;
+}
+
+BSTEventResult QuestService::OnEvent(const TESSceneActionEvent* apEvent, const EventDispatcher<TESSceneActionEvent>*)
+{
+    spdlog::info("TESSceneActionEvent: scene id {:X}, action index {}", apEvent->sceneFormId, apEvent->actionIndex);
+
+    if (!m_world.GetPartyService().IsLeader())
+        return BSTEventResult::kAbort;
+
+    return BSTEventResult::kOk;
+}
+
+BSTEventResult QuestService::OnEvent(const TESScenePhaseEvent* apEvent, const EventDispatcher<TESScenePhaseEvent>*)
+{
+    const String sceneType = apEvent->sceneType == 0 ? "Begin" : "End";
+    spdlog::info("TESScenePhaseEvent event: quest stage {}, phase index {}, type {}", apEvent->questStageId, apEvent->phaseIndex, sceneType);
+
+    if (!m_world.GetPartyService().IsLeader())
+        return BSTEventResult::kAbort;
+
+    return BSTEventResult::kOk;
+}
+
 void QuestService::OnQuestUpdate(const NotifyQuestUpdate& aUpdate) noexcept
 {
     ModSystem& modSystem = World::Get().GetModSystem();
@@ -170,9 +233,7 @@ void QuestService::OnQuestUpdate(const NotifyQuestUpdate& aUpdate) noexcept
 
     if (pQuest->type == TESQuest::Type::None || pQuest->type == TESQuest::Type::Miscellaneous)
     {
-        spdlog::info(__FUNCTION__ ": receiving type none/misc quest update gameId {:X} questStage {} questStatus {} questType {} formId {:X} name {}",
-                     aUpdate.Id.LogFormat(), aUpdate.Stage, aUpdate.Status,
-                     aUpdate.ClientQuestType, formId, pQuest->fullName.value.AsAscii());
+        spdlog::info(__FUNCTION__ ": receiving type none/misc quest update gameId {:X} questStage {} questStatus {} questType {} formId {:X} name {}", aUpdate.Id.LogFormat(), aUpdate.Stage, aUpdate.Status, aUpdate.ClientQuestType, formId, pQuest->fullName.value.AsAscii());
     }
 
     bool bResult = false;
@@ -200,6 +261,26 @@ void QuestService::OnQuestUpdate(const NotifyQuestUpdate& aUpdate) noexcept
 
     if (!bResult)
         spdlog::error("Failed to update the client quest state, quest: {:X}, stage: {}, status: {}", formId, aUpdate.Stage, aUpdate.Status);
+}
+
+void QuestService::OnQuestSceneUpdate(const NotifyQuestSceneUpdate& aUpdate) noexcept
+{
+    ModSystem& modSystem = World::Get().GetModSystem();
+    TESQuest* pQuest = Cast<TESQuest>(TESForm::GetById(modSystem.GetGameId(aUpdate.QuestId)));
+    if (!pQuest)
+    {
+        spdlog::error("Failed to find quest, base id: {:X}, mod id: {:X}", aUpdate.QuestId.BaseId, aUpdate.QuestId.ModId);
+        return;
+    }
+    BGSScene* pScene = Cast<BGSScene>(TESForm::GetById(modSystem.GetGameId(aUpdate.SceneId)));
+    if (!pScene)
+    {
+        spdlog::error("Failed to find scene, base id: {:X}, mod id: {:X}", aUpdate.SceneId.BaseId, aUpdate.SceneId.ModId);
+        return;
+    }
+
+    spdlog::debug("Force starting scene {}", aUpdate.QuestId.LogFormat());
+    pScene->ScriptForceStart();
 }
 
 bool QuestService::CanAdvanceQuestForParty() const noexcept
@@ -238,8 +319,7 @@ bool QuestService::IsNonSyncableQuest(TESQuest* apQuest)
     // Quests with no quest stages are never synced. Most TESQues::Type:: quests should
     // be synced, including Type::None and Type::Miscellaneous, but there are a few
     // known exceptions that should be excluded that are in the table.
-    return    apQuest->stages.Empty() 
-           || std::find(kNonSyncableQuestIds.begin(), kNonSyncableQuestIds.end(), apQuest->formID) != kNonSyncableQuestIds.end();
+    return apQuest->pExecutedStages->Empty() || std::find(kNonSyncableQuestIds.begin(), kNonSyncableQuestIds.end(), apQuest->formID) != kNonSyncableQuestIds.end();
 }
 
 void QuestService::DebugDumpQuests()

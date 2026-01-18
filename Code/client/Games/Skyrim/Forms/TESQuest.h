@@ -3,13 +3,41 @@
 #include <Games/Primitives.h>
 #include <Misc/BSString.h>
 #include <Components/TESFullName.h>
+#include <Components/TESCondition.h>
 #include <Forms/BGSStoryManagerTree.h>
+
+struct BGSSceneAction
+{
+    virtual ~BGSSceneAction();
+
+    uint32_t actorID;
+    uint16_t startPhase;
+    uint16_t endPhase;
+    uint32_t flags;
+    uint8_t status;
+
+    void Start() { this->status |= 1u; }
+};
+
+static_assert(offsetof(BGSSceneAction, flags) == 0x10);
 
 struct BGSScene : TESForm
 {
     GameArray<void*> phases;
     GameArray<uint32_t> actorIds;
+    GameArray<uint32_t> actorFlags;
+    GameArray<uint32_t> actorProgressionFlags;
+    GameArray<BGSSceneAction*> actions;
+    TESQuest* owningQuest;
+    uint32_t flags;
+    uint32_t padA4;
+    TESCondition conditions;
+    bool isPlaying;
+
+    void ScriptForceStart();
 };
+
+static_assert(offsetof(BGSScene, isPlaying) == 0xB0);
 
 struct TESQuest : BGSStoryManagerTreeForm
 {
@@ -76,6 +104,10 @@ struct TESQuest : BGSStoryManagerTreeForm
         uint16_t stageIndex;
         uint8_t flags;
 
+        operator bool() const
+        {
+            return *reinterpret_cast<const std::uintptr_t*>(this) != 0;
+        }
         inline bool IsDone() { return flags & 1; }
     };
 
@@ -90,11 +122,9 @@ struct TESQuest : BGSStoryManagerTreeForm
     Type type;            // 0x00DF
     int32_t scopedStatus; // 0x00E0 default init: -1, if not -1 outside of story manager scope
     uint32_t padE4;
-    GameList<Stage> stages;
-    /*
-    GameList<Stage>* pExecutedStages;  // 0x00E8
-    GameList<Stage>* pWaitingStages;   // 0x00F0
-    */
+    //GameList<Stage> stages;
+    GameValueList<Stage>* pExecutedStages;  // 0x00E8
+    GameValueList<Stage*>* pWaitingStages;   // 0x00F0
     GameList<Objective> objectives; // 0x00F8
     char pad108[0x100];             // 0x0108
     GameArray<BGSScene*> scenes;    // 0x0208
@@ -129,12 +159,13 @@ struct TESQuest : BGSStoryManagerTreeForm
     bool SetStage(uint16_t stageIndex);
     void ScriptSetStage(uint16_t stage);
     void SetStopped();
+    bool IsAnyCutscenePlaying();
 };
 
 static_assert(sizeof(TESQuest) == 0x268);
 static_assert(offsetof(TESQuest, fullName) == 0x28);
 static_assert(offsetof(TESQuest, flags) == 0xDC);
-static_assert(offsetof(TESQuest, stages) == 0xE8);
+static_assert(offsetof(TESQuest, pExecutedStages) == 0xE8);
 static_assert(offsetof(TESQuest, objectives) == 0xF8);
 static_assert(offsetof(TESQuest, currentStage) == 0x228);
 static_assert(offsetof(TESQuest, unkFlags) == 0x248);

@@ -6,11 +6,10 @@
 struct World;
 struct UpdateEvent;
 struct RequestQuestUpdate;
+struct RequestQuestSceneUpdate;
 
 /**
  * @brief Dispatch quest sync messages.
- *
- * This service is currently not in use.
  */
 class QuestService
 {
@@ -19,10 +18,12 @@ public:
 
 private:
     void OnQuestChanges(const PacketEvent<RequestQuestUpdate>& aChanges) noexcept;
+    void OnQuestSceneChanges(const PacketEvent<RequestQuestSceneUpdate>& aChanges) noexcept;
 
     World& m_world;
 
     entt::scoped_connection m_questUpdateConnection;
+    entt::scoped_connection m_questSceneUpdateConnection;
     entt::scoped_connection m_updateConnection;
     entt::scoped_connection m_joinConnection;
 };

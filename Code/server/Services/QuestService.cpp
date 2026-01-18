@@ -5,19 +5,21 @@
 #include <Services/QuestService.h>
 
 #include <Messages/RequestQuestUpdate.h>
+#include <Messages/RequestQuestSceneUpdate.h>
 #include <Messages/NotifyQuestUpdate.h>
+#include <Messages/NotifyQuestSceneUpdate.h>
 
 #include <Setting.h>
 namespace
 {
 Console::Setting bEnableMiscQuestSync{"Gameplay:bEnableMiscQuestSync", "(Experimental) Syncs miscellaneous quests when possible", false};
-
 }
 
 QuestService::QuestService(World& aWorld, entt::dispatcher& aDispatcher)
     : m_world(aWorld)
 {
     m_questUpdateConnection = aDispatcher.sink<PacketEvent<RequestQuestUpdate>>().connect<&QuestService::OnQuestChanges>(this);
+    m_questSceneUpdateConnection = aDispatcher.sink<PacketEvent<RequestQuestSceneUpdate>>().connect<&QuestService::OnQuestSceneChanges>(this);
 }
 
 void QuestService::OnQuestChanges(const PacketEvent<RequestQuestUpdate>& acMessage) noexcept
@@ -93,6 +95,24 @@ void QuestService::OnQuestChanges(const PacketEvent<RequestQuestUpdate>& acMessa
     const auto& partyComponent = acMessage.pPlayer->GetParty();
     if (!partyComponent.JoinedPartyId.has_value())
         return;
+
+    GameServer::Get()->SendToParty(notify, partyComponent, acMessage.GetSender());
+}
+
+void QuestService::OnQuestSceneChanges(const PacketEvent<RequestQuestSceneUpdate>& acMessage) noexcept
+{
+    const auto& message = acMessage.Packet;
+
+    auto* pPlayer = acMessage.pPlayer;
+    NotifyQuestSceneUpdate notify{};
+    notify.SceneId = message.SceneId;
+    notify.QuestId = message.QuestId;
+
+    const auto& partyComponent = acMessage.pPlayer->GetParty();
+    if (!partyComponent.JoinedPartyId.has_value())
+        return;
+
+    spdlog::info(__FUNCTION__ ": sending scene update {} of quest {}", notify.SceneId.LogFormat(), notify.QuestId.LogFormat());
 
     GameServer::Get()->SendToParty(notify, partyComponent, acMessage.GetSender());
 }
