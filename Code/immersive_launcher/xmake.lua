@@ -32,20 +32,9 @@ local function build_launcher()
         "CommonLib")
     add_links("ntdll_x64")
     add_linkdirs(".")
-    add_syslinks(
-        "user32",
-        "shell32",
-        "comdlg32",
-        "bcrypt",
-        "ole32",
-        "dxgi",
-        "d3d11",
-        "gdi32",
-        "SetupAPI",
-        "Powrprof",
-        "Cfgmgr32",
-        "Propsys",
-        "delayimp")
+    -- add_syslinks(
+    --     "user32",
+    --     "d3d11")
 
     add_packages(
         "tiltedcore",

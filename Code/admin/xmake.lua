@@ -17,9 +17,9 @@ target("Admin")
 
     add_deps("SkyrimEncoding")
 
-    if is_plat("windows") then
-        add_syslinks("opengl32", "Shell32", "Gdi32", "Winmm", "Ole32", "version", "OleAut32", "Setupapi")
-    end
+    -- if is_plat("windows") then
+    --     add_syslinks("opengl32", "Shell32", "Gdi32", "Winmm", "Ole32", "version", "OleAut32", "Setupapi")
+    -- end
 
     add_packages(
         "tiltedcore",
