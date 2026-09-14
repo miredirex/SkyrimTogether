@@ -1,6 +1,7 @@
 
 #include <TiltedOnlineApp.h>
 #include <TiltedOnlinePCH.h>
+#include <ScriptExtender.h>
 
 #include <Commctrl.h>
 #include <Windows.h>
@@ -8,7 +9,7 @@
 #include <base/dialogues/win/TaskDialog.h>
 
 // 1 - Steam, 2 - GOG
-inline constexpr std::string_view kSupportedGameVersions[2] = {"1.7.104.0", "1.7.104.0"};
+inline constexpr std::string_view kSupportedGameVersions[2] = {"1.6.1170.0", "1.6.1179.0"};
 
 std::unique_ptr<TiltedOnlineApp> g_appInstance{nullptr};
 
@@ -73,6 +74,8 @@ void RunTiltedInit(const std::filesystem::path& acGamePath, const String& aExeVe
 
     TiltedOnlineApp::InstallHooks2();
     TP_HOOK_COMMIT;
+
+    LoadScriptExender();
 }
 
 void RunTiltedApp()
