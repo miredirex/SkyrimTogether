@@ -160,7 +160,7 @@ struct TESObjectREFR : TESForm
     // effective cell is needed.
     virtual struct TESObjectCELL* GetSaveParentCell() const;
     virtual void SetParentCell(struct TESObjectCELL* apParentCell);
-    virtual bool VirtIsDead(bool abNotEssential); // TODO: Use this or papyrus IsDead?
+    virtual bool IsDeadNative(bool aExcludeEssentialDown) const; // 99
     virtual void sub_9A();
     virtual void sub_9B();
 

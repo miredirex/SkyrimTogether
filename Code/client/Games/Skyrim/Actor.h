@@ -204,6 +204,7 @@ struct Actor : TESObjectREFR
     Factions GetFactions() const noexcept;
     ActorValues GetEssentialActorValues() const noexcept;
     [[nodiscard]] bool IsDead() const noexcept;
+    [[nodiscard]] bool IsRemoteCorpse() noexcept;
     [[nodiscard]] bool IsDragon() const noexcept;
     [[nodiscard]] bool IsPlayerSummon() const noexcept;
     [[nodiscard]] bool IsInCombat() const noexcept;

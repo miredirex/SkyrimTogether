@@ -25,6 +25,14 @@ void AnimationSystem::Update(World& aWorld, Actor* apActor, RemoteAnimationCompo
 {
     auto& actions = aAnimationComponent.TimePoints;
 
+    if (apActor->IsRemoteCorpse())
+    {
+        actions.clear();
+        aAnimationComponent.ReplayCount = 0;
+        aAnimationComponent.ResetAnimationGraphForReplay = false;
+        return;
+    }
+
     const auto it = std::begin(actions);
     if (it != std::end(actions) && it->Tick <= aTick)
     {
@@ -48,7 +56,18 @@ void AnimationSystem::Update(World& aWorld, Actor* apActor, RemoteAnimationCompo
         const auto pAction = Cast<BGSAction>(TESForm::GetById(actionId));
         const auto pTarget = Cast<TESObjectREFR>(TESForm::GetById(targetId));
 
-        apActor->actorState.flags1 = first.State1;
+        uint32_t state1 = first.State1;
+        if (!apActor->GetExtension()->IsPlayer())
+        {
+            // Copying a dead state here can make IsDead() true before KillImpl
+            // runs, causing the death notification to skip ragdoll setup.
+            constexpr uint32_t cLifeStateMask = 0x1E00000;
+            const uint32_t cLifeState = (state1 & cLifeStateMask) >> 21;
+            // Native IsDead(true): dying (1), dead (2), recycle (5)
+            if (cLifeState == 1 || cLifeState == 2 || cLifeState == 5)
+                state1 = (state1 & ~cLifeStateMask) | (apActor->actorState.flags1 & cLifeStateMask);
+        }
+        apActor->actorState.flags1 = state1;
         apActor->actorState.flags2 = first.State2;
 
         apActor->LoadAnimationVariables(first.Variables);

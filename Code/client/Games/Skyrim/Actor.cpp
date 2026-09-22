@@ -819,6 +819,12 @@ bool Actor::IsDead() const noexcept
     return s_pIsDead(this);
 }
 
+bool Actor::IsRemoteCorpse() noexcept
+{
+    const auto* pExtension = GetExtension();
+    return pExtension && pExtension->IsRemote() && !pExtension->IsPlayer() && IsDeadNative(true);
+}
+
 bool Actor::IsDragon() const noexcept
 {
     const ActorExtension* pExtension = const_cast<Actor*>(this)->GetExtension();
@@ -832,8 +838,16 @@ void Actor::Kill() noexcept
     if (pExtension->IsPlayer())
         return;
 
+    // KillImpl dispatches death/ragdoll actions through PerformAction. Remote
+    // action suppression must not interrupt this replicated death transition.
+    const bool cForceAnimation = g_forceAnimation;
+    if (pExtension->IsRemote())
+        g_forceAnimation = true;
+
     // TODO: these args are kind of bogus of course
     KillImpl(nullptr, 100.f, true, true);
+
+    g_forceAnimation = cForceAnimation;
 
     // Papyrus kill will not go through if it is queued by a kill move
     /*
@@ -907,6 +921,11 @@ char TP_MAKE_THISCALL(HookSetPosition, Actor, NiPoint3& aPosition)
 {
     const auto pExtension = apThis ? apThis->GetExtension() : nullptr;
     const auto bIsRemote = pExtension && pExtension->IsRemote();
+
+    // Ragdoll readback updates the reference without moving the scene root.
+    // Do not block it or redirect it through Actor::SetPosition.
+    if (bIsRemote && apThis->IsRemoteCorpse())
+        return TiltedPhoques::ThisCall(RealSetPosition, apThis, aPosition);
 
     if (bIsRemote && !ScopedReferencesOverride::IsOverriden())
         return 1;

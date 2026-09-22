@@ -46,6 +46,10 @@ void InterpolationSystem::Update(Actor* apActor, InterpolationComponent& aInterp
     if (!apActor)
         return;
 
+    // Let local physics move the corpse so its visible body and hitbox stay together.
+    if (apActor->IsRemoteCorpse())
+        return;
+
     apActor->ForcePosition(position);
     apActor->LoadAnimationVariables(second.Variables);
 

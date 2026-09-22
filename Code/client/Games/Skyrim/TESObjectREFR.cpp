@@ -1091,8 +1091,8 @@ void TP_MAKE_THISCALL(HookRotateX, TESObjectREFR, float aAngle)
     if (apThis->formType == Actor::Type)
     {
         const auto pActor = static_cast<Actor*>(apThis);
-        // We don't allow remotes to move
-        if (pActor->GetExtension()->IsRemote())
+        // We don't allow alive remotes to move
+        if (pActor->GetExtension()->IsRemote() && !pActor->IsRemoteCorpse())
             return;
     }
 
@@ -1104,8 +1104,8 @@ void TP_MAKE_THISCALL(HookRotateY, TESObjectREFR, float aAngle)
     if (apThis->formType == Actor::Type)
     {
         const auto pActor = static_cast<Actor*>(apThis);
-        // We don't allow remotes to move
-        if (pActor->GetExtension()->IsRemote())
+        // We don't allow alive remotes to move
+        if (pActor->GetExtension()->IsRemote() && !pActor->IsRemoteCorpse())
             return;
     }
 
@@ -1117,8 +1117,8 @@ void TP_MAKE_THISCALL(HookRotateZ, TESObjectREFR, float aAngle)
     if (apThis->formType == Actor::Type)
     {
         const auto pActor = static_cast<Actor*>(apThis);
-        // We don't allow remotes to move
-        if (pActor->GetExtension()->IsRemote())
+        // We don't allow alive remotes to move
+        if (pActor->GetExtension()->IsRemote() && !pActor->IsRemoteCorpse())
             return;
     }
 

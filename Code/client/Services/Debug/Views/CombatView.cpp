@@ -165,7 +165,7 @@ float CalculateTargetScore(CombatTargetSelector* apThis, CombatTarget* apCombatT
             score -= 2500.f;
     }
 
-    if (apTarget->VirtIsDead(false))
+    if (apTarget->IsDeadNative(false))
         score -= 500.f;
 
     if (IsFleeing(apTarget))
