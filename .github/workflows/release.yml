@@ -42,14 +42,3 @@ jobs:
             test -f "release-files/$asset"
           done
 
-      - name: Create GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-        run: |
-          version="${GITHUB_REF_NAME#v}"
-          gh release create "$GITHUB_REF_NAME" \
-            ./release-files/* \
-            --verify-tag \
-            --generate-notes \
-            --title "Skyrim Together $version"
