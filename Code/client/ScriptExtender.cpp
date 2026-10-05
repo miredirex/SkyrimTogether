@@ -74,7 +74,7 @@ bool IsScriptExtenderLoaded()
     return g_SKSEModuleHandle;
 }
 
-void LoadScriptExender()
+void LoadScriptExtender()
 {
     const auto exeVerson{GetSKSEStyleExeVersion()};
 
