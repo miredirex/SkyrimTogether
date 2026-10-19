@@ -54,6 +54,7 @@ enum ClientOpcode : unsigned char
     kRequestRemoveWaypoint,
     kSetTimeCommandRequest,
     kRequestActionEvents,
+    kSendModMessageRequest,
     kClientOpcodeMax
 };
 
@@ -114,5 +115,6 @@ enum ServerOpcode : unsigned char
     kNotifyRemoveWaypoint,
     kNotifySetTimeResult,
     kNotifyActionEvents,
+    kNotifyModMessage,
     kServerOpcodeMax
 };
