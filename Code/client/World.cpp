@@ -21,8 +21,15 @@
 #include <Services/CombatService.h>
 #include <Services/WeatherService.h>
 #include <Services/MapService.h>
+#include <Services/PluginService.h>
+
+#include <Messages/NotifyModMessage.h>
+#include <Messages/NotifyPartyInfo.h>
+#include <Messages/NotifyPartyJoined.h>
+#include <Messages/NotifyPartyLeft.h>
 
 #include <Events/PreUpdateEvent.h>
+#include <Events/DisconnectedEvent.h>
 #include <Events/UpdateEvent.h>
 
 #include <ModCompat/BehaviorVar.h>  
@@ -54,6 +61,14 @@ World::World()
     ctx().emplace<CombatService>(*this, m_transport, m_dispatcher);
     ctx().emplace<WeatherService>(*this, m_transport, m_dispatcher);
     ctx().emplace<MapService>(*this, m_dispatcher, m_transport);
+
+    // The Plugin API outlives the World, so there is nothing to disconnect
+    m_dispatcher.sink<NotifyModMessage>().connect<&PluginService::OnNotifyModMessage>(PluginService::Get());
+    // These come after PartyService's own handlers, so its member list is up to date by then
+    m_dispatcher.sink<NotifyPartyInfo>().connect<&PluginService::OnPartyEvent<NotifyPartyInfo>>(PluginService::Get());
+    m_dispatcher.sink<NotifyPartyJoined>().connect<&PluginService::OnPartyEvent<NotifyPartyJoined>>(PluginService::Get());
+    m_dispatcher.sink<NotifyPartyLeft>().connect<&PluginService::OnPartyEvent<NotifyPartyLeft>>(PluginService::Get());
+    m_dispatcher.sink<DisconnectedEvent>().connect<&PluginService::OnPartyEvent<DisconnectedEvent>>(PluginService::Get());
 
     BehaviorVar::Get()->Init();
 }
